@@ -12,9 +12,28 @@ export function useLocationCapture() {
       setStatus('denied');
       return;
     }
+
+    // En Android, pedir precisión alta puede tardar mucho esperando un fix
+    // real de GPS. Mostramos primero la última ubicación conocida (si existe,
+    // es casi instantánea) y refinamos en segundo plano con una lectura fresca
+    // de precisión media (usa red/WiFi, mucho más rápida que GPS puro).
+    try {
+      const lastKnown = await Location.getLastKnownPositionAsync();
+      if (lastKnown) {
+        setCoords({
+          lat: lastKnown.coords.latitude,
+          lon: lastKnown.coords.longitude,
+          accuracy: lastKnown.coords.accuracy,
+        });
+        setStatus('granted');
+      }
+    } catch (e) {
+      // Sin última posición conocida; seguimos con la lectura fresca de abajo.
+    }
+
     try {
       const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: Location.Accuracy.Balanced,
       });
       setCoords({
         lat: position.coords.latitude,
@@ -23,7 +42,7 @@ export function useLocationCapture() {
       });
       setStatus('granted');
     } catch (e) {
-      setStatus('error');
+      setStatus((prev) => (prev === 'granted' ? prev : 'error'));
     }
   }, []);
 
