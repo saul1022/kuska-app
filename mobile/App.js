@@ -134,23 +134,26 @@ export default function App() {
       });
       reloadReports();
 
-      // Intento de envío inmediato si hay red; si falla o no hay red, queda
-      // "pendiente" en SQLite y useNetworkSync lo reintentará automáticamente.
-      try {
-        const result = await createIncident({
-          clientId,
-          description,
-          lat: location?.lat,
-          lon: location?.lon,
-          createdAtClient,
-          photoUris: persistedPhotoUri ? [persistedPhotoUri] : [],
-          videoUri: persistedVideoUri,
+      // No se espera esta llamada: el análisis de Gemma puede tardar varios
+      // segundos y el usuario ya guardó su reporte localmente (offline-first).
+      // Corre en segundo plano y actualiza el estado cuando termine.
+      createIncident({
+        clientId,
+        description,
+        lat: location?.lat,
+        lon: location?.lon,
+        createdAtClient,
+        photoUris: persistedPhotoUri ? [persistedPhotoUri] : [],
+        videoUri: persistedVideoUri,
+      })
+        .then((result) => {
+          updateReportStatus(clientId, 'synced', result.incident_id);
+          reloadReports();
+        })
+        .catch(() => {
+          updateReportStatus(clientId, 'error', null);
+          reloadReports();
         });
-        updateReportStatus(clientId, 'synced', result.incident_id);
-      } catch (e) {
-        updateReportStatus(clientId, 'error', null);
-      }
-      reloadReports();
     },
     [reloadReports]
   );
