@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "kuska-mobile",
+    "slug": "kuska-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Kuska necesita tu cámara para registrar evidencia del daño.",
+          "microphonePermission": "Kuska necesita tu micrófono para grabar video del incidente.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Kuska necesita tu ubicación para marcar dónde ocurrió el incidente."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Kuska necesita acceso a tus fotos para adjuntar evidencia existente al reporte."
+        }
+      ]
+    ]
+  }
+}
