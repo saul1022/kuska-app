@@ -20,7 +20,7 @@ function buildFormData(payload) {
   form.append('created_at_client', payload.createdAtClient);
 
   payload.photoUris.forEach((uri, index) => {
-    form.append('photos[]', {
+    form.append('photos', {
       uri,
       name: `photo_${index}.jpg`,
       type: 'image/jpeg',
@@ -49,10 +49,10 @@ export async function createIncident(payload) {
     return { incident_id: `mock-${payload.clientId}`, status: 'processing' };
   }
 
+  // No fijar Content-Type a mano: fetch/RN debe generar el boundary del multipart.
   const response = await fetch(`${API_BASE_URL}/incidents`, {
     method: 'POST',
     body: buildFormData(payload),
-    headers: { 'Content-Type': 'multipart/form-data' },
   });
 
   if (!response.ok) {
@@ -77,18 +77,23 @@ export async function syncBatch(payloads) {
     }));
   }
 
+  // Solo válido para evidencia ya subida (photo_urls/video_url con URL http),
+  // nunca para rutas locales (file://). El flujo actual sube foto/video con
+  // POST /incidents (multipart), que ya es idempotente por client_id.
   const response = await fetch(`${API_BASE_URL}/sync/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(
-      payloads.map((p) => ({
+    body: JSON.stringify({
+      incidents: payloads.map((p) => ({
+        client_id: p.clientId,
         description: p.description,
         lat: p.lat,
         lon: p.lon,
-        client_id: p.clientId,
         created_at_client: p.createdAtClient,
-      }))
-    ),
+        photo_urls: p.photoUrls ?? [],
+        video_url: p.videoUrl ?? null,
+      })),
+    }),
   });
 
   if (!response.ok) {

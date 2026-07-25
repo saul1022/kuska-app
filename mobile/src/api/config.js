@@ -1,4 +1,4 @@
-// Cambiar esta URL apenas el equipo de backend deploye (ver FRONTEND.md).
-// Mientras tanto MOCK_API=true hace que el cliente simule las respuestas.
-export const API_BASE_URL = 'https://TODO-backend-url.example.com';
-export const MOCK_API = true;
+// IP local de la compu que corre `uvicorn` (backend/). El celular debe estar
+// en la MISMA red WiFi. Cambiar cuando el backend se deploye a una URL pública.
+export const API_BASE_URL = 'http://172.16.41.85:8000';
+export const MOCK_API = false;

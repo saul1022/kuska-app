@@ -7,6 +7,7 @@ import {
   Image,
   ScrollView,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -21,10 +22,12 @@ export default function CapturaScreen({ navigation, onSubmit }) {
   const [photoUri, setPhotoUri] = useState(null);
   const [videoUri, setVideoUri] = useState(null);
   const [captureMode, setCaptureMode] = useState(null); // 'photo' | 'video' | null
+  const [submitting, setSubmitting] = useState(false);
 
   const location = useLocationCapture();
 
-  const canSubmit = Boolean(photoUri);
+  const canSubmit =
+    Boolean(photoUri) && description.trim().length >= 10 && location.status === 'granted';
 
   async function pickFromGallery(kind) {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -44,17 +47,28 @@ export default function CapturaScreen({ navigation, onSubmit }) {
     }
   }
 
-  function handleSubmit() {
-    onSubmit({
-      description,
-      photoUri,
-      videoUri,
-      location: location.coords,
-    });
-    setDescription('');
-    setPhotoUri(null);
-    setVideoUri(null);
-    navigation.navigate('ReporteGuardado');
+  async function handleSubmit() {
+    if (submitting || !canSubmit) return;
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        description,
+        photoUri,
+        videoUri,
+        location: location.coords,
+      });
+      setDescription('');
+      setPhotoUri(null);
+      setVideoUri(null);
+      navigation.navigate('ReporteGuardado');
+    } catch (e) {
+      Alert.alert(
+        'No se pudo guardar el reporte',
+        e?.message ?? 'Ocurrió un error inesperado. Intenta de nuevo.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -157,12 +171,21 @@ export default function CapturaScreen({ navigation, onSubmit }) {
           </View>
         </Pressable>
 
-        <View style={{ marginTop: 16 }}>
+        <View style={{ marginTop: 16, gap: 8 }}>
+          {!canSubmit && !submitting ? (
+            <Text style={[typography.labelStatus, styles.hint]}>
+              Falta: {!photoUri && 'foto'}
+              {!photoUri && description.trim().length < 10 && ', '}
+              {description.trim().length < 10 && 'descripción de al menos 10 caracteres'}
+              {(!photoUri || description.trim().length < 10) && location.status !== 'granted' && ', '}
+              {location.status !== 'granted' && 'ubicación GPS'}
+            </Text>
+          ) : null}
           <PrimaryButton
-            label="Enviar Reporte"
+            label={submitting ? 'Enviando…' : 'Enviar Reporte'}
             icon="send"
             onPress={handleSubmit}
-            disabled={!canSubmit}
+            disabled={!canSubmit || submitting}
           />
         </View>
       </ScrollView>
@@ -322,5 +345,9 @@ const styles = StyleSheet.create({
   locationSubtitle: {
     color: colors.onSurfaceVariant,
     fontSize: 13,
+  },
+  hint: {
+    color: colors.statusHighError,
+    fontSize: 12,
   },
 });
