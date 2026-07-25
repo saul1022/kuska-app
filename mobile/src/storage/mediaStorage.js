@@ -1,4 +1,7 @@
-import * as FileSystem from 'expo-file-system';
+// SDK 54 movió la API clásica (getInfoAsync/makeDirectoryAsync/copyAsync) a
+// esta ruta "legacy"; el paquete raíz ahora expone la nueva API basada en
+// clases (File/Directory) con una firma distinta.
+import * as FileSystem from 'expo-file-system/legacy';
 
 const MEDIA_DIR = `${FileSystem.documentDirectory}kuska-media/`;
 
