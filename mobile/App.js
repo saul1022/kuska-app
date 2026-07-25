@@ -19,9 +19,16 @@ import MisReportesScreen from './src/screens/MisReportesScreen';
 import ReportDetailScreen from './src/screens/ReportDetailScreen';
 import { mockReports } from './src/data/mockReports';
 import { colors } from './src/theme';
-import { createIncident } from './src/api/incidents';
+import { createIncident, getIncidentDetail } from './src/api/incidents';
 import { generateUuid } from './src/utils/uuid';
-import { initDb, insertReport, updateReportStatus, getAllReports, countReports } from './src/storage/db';
+import {
+  initDb,
+  insertReport,
+  updateReportStatus,
+  updateGemmaResult,
+  getAllReports,
+  countReports,
+} from './src/storage/db';
 import { persistMedia } from './src/storage/mediaStorage';
 import { mapDbRowToReport } from './src/storage/mapReport';
 import { useNetworkSync } from './src/hooks/useNetworkSync';
@@ -108,6 +115,27 @@ export default function App() {
 
   useNetworkSync(reloadReports);
 
+  // Tras un envío exitoso, el backend ya devolvió status="validated"/"needs_review"
+  // pero no el gemma_result completo (foto/video, riesgos, explicación). Se busca
+  // aparte con GET /incidents/{id} y se guarda localmente para verlo sin conexión.
+  const finalizeSync = useCallback(
+    async (clientId, incidentId) => {
+      updateReportStatus(clientId, 'synced', incidentId);
+      reloadReports();
+      try {
+        const detail = await getIncidentDetail(incidentId);
+        if (detail?.gemma_result) {
+          updateGemmaResult(clientId, detail.gemma_result);
+        }
+      } catch (e) {
+        // El envío sí se sincronizó; solo falló traer el detalle del análisis.
+        // Se puede reintentar la próxima vez que se recargue el reporte.
+      }
+      reloadReports();
+    },
+    [reloadReports]
+  );
+
   const handleSubmit = useCallback(
     async ({ description, photoUri, videoUri, location }) => {
       const clientId = generateUuid();
@@ -146,16 +174,13 @@ export default function App() {
         photoUris: persistedPhotoUri ? [persistedPhotoUri] : [],
         videoUri: persistedVideoUri,
       })
-        .then((result) => {
-          updateReportStatus(clientId, 'synced', result.incident_id);
-          reloadReports();
-        })
+        .then((result) => finalizeSync(clientId, result.incident_id))
         .catch(() => {
           updateReportStatus(clientId, 'error', null);
           reloadReports();
         });
     },
-    [reloadReports]
+    [reloadReports, finalizeSync]
   );
 
   const handleRetry = useCallback(
@@ -176,13 +201,13 @@ export default function App() {
           photoUris: row.photo_uri ? [row.photo_uri] : [],
           videoUri: row.video_uri,
         });
-        updateReportStatus(clientId, 'synced', result.incident_id);
+        await finalizeSync(clientId, result.incident_id);
       } catch (e) {
         updateReportStatus(clientId, 'error', null);
+        reloadReports();
       }
-      reloadReports();
     },
-    [reloadReports]
+    [reloadReports, finalizeSync]
   );
 
   const onReady = useCallback(async () => {

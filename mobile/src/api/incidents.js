@@ -63,6 +63,34 @@ export async function createIncident(payload) {
 }
 
 /**
+ * GET /incidents/{id}
+ * @param {string} incidentId
+ * @returns {Promise<{ gemma_result: object|null }>}
+ */
+export async function getIncidentDetail(incidentId) {
+  if (MOCK_API || incidentId.startsWith('mock-')) {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return {
+      gemma_result: {
+        type: 'otro',
+        damage_level: 'leve',
+        trapped_people_possible: false,
+        secondary_risks: [],
+        priority: 'baja',
+        explanation: 'Resultado simulado (MOCK_API activo).',
+        confidence: 0.5,
+      },
+    };
+  }
+
+  const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}`);
+  if (!response.ok) {
+    throw new Error(`GET /incidents/${incidentId} falló con status ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
  * POST /sync/batch
  * @param {IncidentPayload[]} payloads
  * @returns {Promise<{ client_id: string, incident_id: string, status: string }[]>}

@@ -18,5 +18,6 @@ export function mapDbRowToReport(row) {
     status: row.status,
     imageUrl: row.photo_uri,
     videoUri: row.video_uri,
+    gemmaResult: row.gemma_result_json ? JSON.parse(row.gemma_result_json) : null,
   };
 }

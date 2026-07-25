@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import NetInfo from '@react-native-community/netinfo';
-import { getPendingReports, updateReportStatus } from '../storage/db';
-import { createIncident } from '../api/incidents';
+import { getPendingReports, updateReportStatus, updateGemmaResult } from '../storage/db';
+import { createIncident, getIncidentDetail } from '../api/incidents';
 
 /**
  * Escucha la conexión de red y, apenas hay conectividad, intenta subir
@@ -29,6 +29,15 @@ export function useNetworkSync(onChange) {
               videoUri: row.video_uri,
             });
             updateReportStatus(row.client_id, 'synced', result.incident_id);
+            try {
+              const detail = await getIncidentDetail(result.incident_id);
+              if (detail?.gemma_result) {
+                updateGemmaResult(row.client_id, detail.gemma_result);
+              }
+            } catch (e) {
+              // El envío sí se sincronizó; el detalle del análisis se puede
+              // reintentar más adelante.
+            }
           } catch (e) {
             updateReportStatus(row.client_id, 'error', null);
           }

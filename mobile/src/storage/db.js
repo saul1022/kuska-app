@@ -14,9 +14,17 @@ export function initDb() {
       video_uri TEXT,
       created_at_client TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
-      incident_id TEXT
+      incident_id TEXT,
+      gemma_result_json TEXT
     );
   `);
+  // Instalaciones previas a este campo: agregarlo si falta (SQLite no tiene
+  // "ADD COLUMN IF NOT EXISTS", así que se ignora el error si ya existe).
+  try {
+    db.execSync(`ALTER TABLE reports ADD COLUMN gemma_result_json TEXT;`);
+  } catch (e) {
+    // ya existe
+  }
 }
 
 export function insertReport(report) {
@@ -43,6 +51,13 @@ export function updateReportStatus(clientId, status, incidentId) {
   db.runSync(`UPDATE reports SET status = ?, incident_id = ? WHERE client_id = ?`, [
     status,
     incidentId ?? null,
+    clientId,
+  ]);
+}
+
+export function updateGemmaResult(clientId, gemmaResult) {
+  db.runSync(`UPDATE reports SET gemma_result_json = ? WHERE client_id = ?`, [
+    gemmaResult ? JSON.stringify(gemmaResult) : null,
     clientId,
   ]);
 }
